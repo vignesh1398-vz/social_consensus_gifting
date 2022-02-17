@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
 const { bootstrapGifts } = require('./api/gifts/gift.controller');
+const { bootstrapUsers } = require('./api/users/user.controller');
 var logger = require('./logger/logger').logger;
 
 
@@ -18,6 +19,7 @@ require('./routes')(app);
   try{
     await mongoose.connect(process.env.MONGODB_URI);
     await bootstrapGifts();
+    await bootstrapUsers();
     logger.info('Server is up and running');
   }
   catch(error){
