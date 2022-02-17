@@ -1,0 +1,52 @@
+[
+    {
+        "name": "Teddy Bear",
+        "tags": ["Children", "Toy"],
+        "vote": 0
+    },
+    {
+        "name": "Chocolates",
+        "tags": ["Edible"],
+        "vote": 0
+    },
+    {
+        "name": "Book",
+        "tags": ["Entertainment"],
+        "vote": 0
+    },
+    {
+        "name": "Chess Board",
+        "tags": ["Sport", "Toy", "Children"],
+        "vote": 0
+    },
+    {
+        "name": "Basketball",
+        "tags": ["Children", "Toy", "Sport"],
+        "vote": 0
+    },
+    {
+        "name": "Tennis Ball",
+        "tags": ["Children", "Toy", "Sport"],
+        "vote": 0
+    },
+    {
+        "name": "Mug",
+        "tags": ["Others"],
+        "vote": 0
+    },
+    {
+        "name": "Pen Holder",
+        "tags": ["Others"],
+        "vote": 0
+    },
+    {
+        "name": "Necklace",
+        "tags": ["Jewellery", "Fashion"],
+        "vote": 0
+    },
+    {
+        "name": "Ring",
+        "tags": ["Jewellery", "Fashion"],
+        "vote": 0
+    }
+]
