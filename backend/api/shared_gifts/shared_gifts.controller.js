@@ -46,3 +46,123 @@ exports.shareGifts = async(request, response) => {
         response.status(400).json({message: error.message });
     }
 }
+
+/* To add or remove users from an already shared gift. */
+exports.modifySharedGift = async(request, response) => {
+    try{
+        let userId = request.headers.id;
+        let sharedGiftId = request.params.sharedGiftId;
+        let { recipients, vote } = request.body;
+        
+        if(!ObjectId.isValid(sharedGiftId))
+            throw new Error('Shared gift id should be an ObjectID');
+        
+        if(!recipients && !vote)
+            throw new Error('Request payload is empty');
+
+        var sharedGiftRecord = await shared_gifts.findById(sharedGiftId);
+        if(!sharedGiftRecord)
+            throw new Error("Shared gift not found");
+        
+        let currentSharedUsers = Object.keys(sharedGiftRecord.sharedWith);
+        /* The person who's shared the gift would like to 
+        add or remove users from the shared gift. */ 
+        if(userId == sharedGiftRecord.sender){
+
+            // To add new buddies if any. 
+            for(let userId of recipients) {
+                if(!currentSharedUsers.includes(userId)) {
+                    sharedGiftRecord.sharedWith[userId] = {};
+                    sharedGiftRecord.sharedWith[userId].sharedTime = new Date().toISOString()
+                    sharedGiftRecord.sharedWith[userId].vote = 0;
+                }
+            }
+
+            // To remove buddies from a gift.
+            _.forEach((currentSharedUsers), (userId) => {
+                if(!recipients.includes(userId)){
+                    delete sharedGiftRecord.sharedWith[userId];
+                }
+            })
+        }
+
+        /*If a buddy votes for his/her shared gift */
+        else if(currentSharedUsers.includes(userId)) {
+            if(sharedGiftRecord.sharedWith[userId].vote != 0)
+                throw new Error('You have already shared your opinion');
+            // if(new Date().getDay() - new Date(sharedGiftRecord.sharedWith[userId].sharedTime).getDay() > 1) // 1 day expiration
+            if((new Date().getMinutes() - new Date(sharedGiftRecord.sharedWith[userId].sharedTime).getMinutes()) > 10) // 10 minutes expiry
+                throw new Error("Time expired");
+            if(vote != undefined && (vote == 1 || vote == -1)){
+                sharedGiftRecord.sharedWith[userId].vote = vote;
+                let giftRecord = await gifts.findById(sharedGiftRecord.gift);
+                if(!giftRecord) 
+                    throw new Error("Gift not found");
+                giftRecord.vote += vote;
+                await giftRecord.save();
+            }
+        }
+
+        else    
+            throw new Error("Invalid operation");
+
+        await sharedGiftRecord.markModified('sharedWith');
+        await sharedGiftRecord.save();
+        logger.info('Modified shared gift.');
+
+        response.status(200).json({
+            id: sharedGiftId, 
+            message: "Shared gift modified "
+        })
+    }
+    catch(error){
+        logger.error(error.message);
+        response.status(400).json({ message: error.message });
+    }
+}
+
+/* View all shared gifts */
+exports.allSharedGifts = async (request, response) => {
+    try{
+        let userId = request.params.userId;
+        if(!ObjectId.isValid(userId))
+            throw new Error('User id should be an ObjectID');
+        
+        let sharedGiftRecords = await shared_gifts.find({sender: ObjectId(userId)})
+                                    .populate({
+                                        path: 'gift'
+                                    })
+                                    .lean();
+
+        let result = transform(sharedGiftRecords)
+        response.status(200).json(result);
+    }
+    catch(error){
+        logger.error(error.message);
+        response.status(400).json({message: error.message });
+    }
+}
+
+
+transform = (records) => {
+    let hashMap = {};
+    let result = [];
+    _.forEach((records), (record) => {
+        hashMap[record._id] = {};
+        hashMap[record._id]['_id'] = record._id;
+        hashMap[record._id]['gift'] = record.gift.name;
+        hashMap[record._id]['votes'] = 0;
+        hashMap[record._id]['sharedWith'] = record.sharedWith;
+
+        _.forOwn(record.sharedWith, (value, key) => {
+            hashMap[record._id]['votes'] += value.vote
+        });
+    })
+
+    _.forOwn(hashMap, (value, key) => {
+        result.push(value);
+    })
+
+    result = _.sortBy(result, (r) => {return !r.votes});
+    return result;
+}

@@ -7,7 +7,7 @@ var sharedGiftSchema = new Schema({
     gift: {
         required: true,
         type: Schema.Types.ObjectId,  
-        ref: 'users'
+        ref: 'gifts'
     },
     sender: {
         required: true,

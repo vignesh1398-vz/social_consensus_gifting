@@ -27,7 +27,7 @@ exports.search = async(request, response) => {
 
         var regex = new RegExp([`.*${keyword}.*`].join(""), "i");
         let searchResults = await gift.find({name: regex})
-                                .sort({vote: 1})
+                                .sort({vote: -1})
                                 .skip(pageNumber > 0 ? pageNumber - 1 : 0)
                                 .limit(limit)
                                 .lean();
@@ -49,7 +49,7 @@ exports.getAllGifts = async(request, response, next) => {
             throw new Error("Page number and limit is required");
         
         let gifts = await gift.find({})
-                        .sort({ vote: 1})
+                        .sort({ vote: -1})
                         .skip(pageNumber > 0 ? pageNumber - 1 : 0)
                         .limit(limit)
                         .lean();
