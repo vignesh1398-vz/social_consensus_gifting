@@ -135,7 +135,7 @@ exports.allSharedGifts = async (request, response) => {
                                     })
                                     .lean();
 
-        let result = transformAllSharedGifts(sharedGiftRecords)
+        let result = await transformAllSharedGifts(sharedGiftRecords)
 
         logger.info(`List of all shared gifts sent for sender: ${userId}`);
         response.status(200).json(result);

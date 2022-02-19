@@ -1,6 +1,9 @@
 const _ = require('lodash');
+const users = require('../api/users/user.model');
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
-exports.transformAllSharedGifts= (records) => {
+exports.transformAllSharedGifts= async (records) => {
     let hashMap = {};
     let result = [];
     _.forEach((records), (record) => {
@@ -20,5 +23,13 @@ exports.transformAllSharedGifts= (records) => {
     })
 
     result = _.sortBy(result, (r) => {return !r.votes});
+    for(let record of result) {
+        let userIds = Object.keys(record.sharedWith);
+        for(let uid of userIds) {
+            let user = await users.findById(ObjectId(uid));
+            record.sharedWith[uid].name = user.name;
+        }
+    }
+
     return result;
 }
