@@ -4,6 +4,7 @@ const _ = require('lodash');
 const shared_gifts = require('./shared_gifts.model');
 const gifts = require('../gifts/gift.model');
 const logger = require('../../logger/logger').logger;
+const { transformAllSharedGifts } = require('../../helper/shared_gifts.helper');
 
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -121,7 +122,7 @@ exports.modifySharedGift = async(request, response) => {
     }
 }
 
-/* View all shared gifts */
+/* View all shared gifts (for sharer).*/
 exports.allSharedGifts = async (request, response) => {
     try{
         let userId = request.params.userId;
@@ -134,7 +135,9 @@ exports.allSharedGifts = async (request, response) => {
                                     })
                                     .lean();
 
-        let result = transform(sharedGiftRecords)
+        let result = transformAllSharedGifts(sharedGiftRecords)
+
+        logger.info(`List of all shared gifts sent for sender: ${userId}`);
         response.status(200).json(result);
     }
     catch(error){
@@ -143,26 +146,59 @@ exports.allSharedGifts = async (request, response) => {
     }
 }
 
-
-transform = (records) => {
-    let hashMap = {};
-    let result = [];
-    _.forEach((records), (record) => {
-        hashMap[record._id] = {};
-        hashMap[record._id]['_id'] = record._id;
-        hashMap[record._id]['gift'] = record.gift.name;
-        hashMap[record._id]['votes'] = 0;
-        hashMap[record._id]['sharedWith'] = record.sharedWith;
-
-        _.forOwn(record.sharedWith, (value, key) => {
-            hashMap[record._id]['votes'] += value.vote
-        });
-    })
-
-    _.forOwn(hashMap, (value, key) => {
-        result.push(value);
-    })
-
-    result = _.sortBy(result, (r) => {return !r.votes});
-    return result;
+/* View all gifts recieved for voting */
+exports.viewAllNotifications = async(request, response) => {
+    try {
+        let userId = request.params.userId;
+        if(!ObjectId.isValid(userId))
+            throw new Error('User id should be an ObjectID');
+        
+        let notifications = await shared_gifts.aggregate([
+            {
+                $project: {
+                    gift: 1,
+                    sharedWith: {$objectToArray: "$sharedWith"},
+                }
+            },
+            {
+                $unwind: "$sharedWith"
+            },
+            {
+                $match: {"sharedWith.k": userId}
+            },
+            {
+                $lookup: {
+                    'from': 'gifts',
+                    'localField': 'gift',
+                    'foreignField': '_id',
+                    'as': 'gift'
+                }
+            },
+            {
+                $unwind: "$gift"
+            },
+            {
+                $project: {
+                    "gift.vote": 0,
+                    "gift._id": 0,
+                    "gift.__v": 0
+                }
+            },
+            {
+                $addFields: {
+                    "sharedTime": "$sharedWith.v.sharedTime",
+                    "vote": "$sharedWith.v.vote"
+                }
+            },
+            {
+                $unset: "sharedWith"
+            }
+        ]) 
+        logger.info(`List of notifications sent for user: ${userId}`);
+        response.status(200).json(notifications);
+    }
+    catch(error){
+        logger.error(error.message);
+        response.status(400).json({message: error.message });
+    }
 }
